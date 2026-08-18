@@ -110,6 +110,17 @@ object UserKnobs {
             it[UPDATER_NEWER_VERSION_CONSENTED]
         }
 
+    private val VPS_HOST = stringPreferencesKey("vps_host")
+    val vpsHost: Flow<String?>
+        get() = Application.getPreferencesDataStore().data.map { it[VPS_HOST] }
+
+    suspend fun setVpsHost(host: String?) {
+        Application.getPreferencesDataStore().edit {
+            if (host.isNullOrBlank()) it.remove(VPS_HOST)
+            else it[VPS_HOST] = host.trim()
+        }
+    }
+
     suspend fun setUpdaterNewerVersionConsented(newerVersionConsented: String?) {
         Application.getPreferencesDataStore().edit {
             if (newerVersionConsented == null)

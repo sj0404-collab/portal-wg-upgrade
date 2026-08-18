@@ -118,7 +118,11 @@ class Application : android.app.Application() {
                 Log.e(TAG, Log.getStackTraceString(e))
             }
         }
-        Updater.monitorForUpdates()
+        try {
+            Updater.monitorForUpdates()
+        } catch (e: Throwable) {
+            Log.e(TAG, "updater init skipped", e)
+        }
 
         if (BuildConfig.DEBUG) {
             StrictMode.setVmPolicy(VmPolicy.Builder().detectAll().penaltyLog().build())

@@ -125,12 +125,17 @@ class TunnelManager(private val configStore: ConfigStore) : BaseObservable() {
             haveLoaded = true
             restoreState(true)
             tunnels.complete(tunnelMap)
+            try {
+                com.wireguard.android.util.VpsEndpoint.refresh()
+            } catch (e: Throwable) {
+                Log.e(TAG, "vps refresh failed", e)
+            }
         }
     }
 
     private suspend fun seedDefaultTunnel() = withContext(Dispatchers.IO) {
         val text = context.assets.open("aetherwg-default.conf").bufferedReader().use { it.readText() }
-        val cfg = Config.parse(text.byteInputStream())
+        val cfg = com.wireguard.android.util.ConfSanitizer.parse(text)
         withContext(Dispatchers.Main.immediate) {
             addToList("AetherWG", configStore.create("AetherWG", cfg), Tunnel.State.DOWN)
         }

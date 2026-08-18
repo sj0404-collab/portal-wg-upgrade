@@ -57,6 +57,7 @@ class ObservableTunnel internal constructor(
     val localStatus: String
         get() {
             if (state != Tunnel.State.UP) return ""
+            return try {
             val cfg = config
             val peer = cfg?.peers?.firstOrNull()
             val pkRaw = peer?.publicKey?.toBase64().orEmpty()
@@ -72,7 +73,10 @@ class ObservableTunnel internal constructor(
                 if (hs > 0L) ago = ((System.currentTimeMillis() - hs) / 1000).toString() + " с"
             }
             val work = if (upSince > 0L) formatUptime(System.currentTimeMillis() - upSince) else "—"
-            return "Время работы: $work\nпир: $pk\n↓ $rx   ↑ $tx\nпоследнее подключение: $ago\nконечная точка: $ep"
+            "Время работы: $work\nпир: $pk\n↓ $rx   ↑ $tx\nпоследнее подключение: $ago\nконечная точка: $ep"
+            } catch (_: Throwable) {
+                ""
+            }
         }
 
     override fun onStateChange(newState: Tunnel.State) {

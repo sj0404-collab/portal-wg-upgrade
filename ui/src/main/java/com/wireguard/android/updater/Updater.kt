@@ -380,8 +380,13 @@ object Updater {
         /* Hello copy and paste artist! Before you go remove these next two lines,
          * I kindly ask that you actually think about what you're doing more globally,
          * and instead remove this entire file from your project. Thank you very much! */
-        if (!context.packageName.startsWith("com.wireguard."))
-            throw RuntimeException("Too much code got copy and pasted")
+        if (!context.packageName.startsWith("com.wireguard.") &&
+            context.packageName != "app.aetherwg.client" &&
+            !context.packageName.startsWith("app.aetherwg.client")
+        ) {
+            Log.w(TAG, "updater skipped for unexpected package ${context.packageName}")
+            return
+        }
 
         if (installerIsGooglePlay(context))
             return

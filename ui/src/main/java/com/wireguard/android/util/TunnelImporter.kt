@@ -1,8 +1,3 @@
-/*
- * Copyright © 2017-2025 WireGuard LLC. All Rights Reserved.
- * SPDX-License-Identifier: Apache-2.0
- */
-
 package com.wireguard.android.util
 
 import android.content.ContentResolver
@@ -20,11 +15,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
-import java.io.BufferedReader
 import java.io.ByteArrayInputStream
-import java.io.InputStreamReader
 import java.nio.charset.StandardCharsets
-import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 
 object TunnelImporter {
@@ -33,68 +25,29 @@ object TunnelImporter {
         val futureTunnels = ArrayList<Deferred<ObservableTunnel>>()
         val throwables = ArrayList<Throwable>()
         try {
-            val columns = arrayOf(OpenableColumns.DISPLAY_NAME)
             var name = ""
-            contentResolver.query(uri, columns, null, null, null)?.use { cursor ->
-                if (cursor.moveToFirst() && !cursor.isNull(0)) {
-                    name = cursor.getString(0)
-                }
+            contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst() && !cursor.isNull(0)) name = cursor.getString(0)
             }
-            if (name.isEmpty()) {
-                name = Uri.decode(uri.lastPathSegment)
-            }
-            var idx = name.lastIndexOf('/')
-            if (idx >= 0) {
-                require(idx < name.length - 1) { context.getString(R.string.illegal_filename_error, name) }
-                name = name.substring(idx + 1)
-            }
-            val isZip = name.lowercase().endsWith(".zip")
-            if (name.lowercase().endsWith(".conf")) {
-                name = name.substring(0, name.length - ".conf".length)
-            } else {
-                require(isZip) { context.getString(R.string.bad_extension_error) }
-            }
-
+            if (name.isEmpty()) name = Uri.decode(uri.lastPathSegment ?: "tunnel")
+            name = name.substringAfterLast('/')
+            val bytes = contentResolver.openInputStream(uri)!!.readBytes()
+            val isZip = name.lowercase().endsWith(".zip") || bytes.size >= 4 && bytes[0] == 0x50.toByte() && bytes[1] == 0x4B.toByte()
             if (isZip) {
-                ZipInputStream(contentResolver.openInputStream(uri)).use { zip ->
-                    val reader = BufferedReader(InputStreamReader(zip, StandardCharsets.UTF_8))
-                    var entry: ZipEntry?
-                    while (true) {
-                        entry = zip.nextEntry ?: break
-                        name = entry.name
-                        idx = name.lastIndexOf('/')
-                        if (idx >= 0) {
-                            if (idx >= name.length - 1) {
-                                continue
-                            }
-                            name = name.substring(name.lastIndexOf('/') + 1)
-                        }
-                        if (name.lowercase().endsWith(".conf")) {
-                            name = name.substring(0, name.length - ".conf".length)
-                        } else {
-                            continue
-                        }
-                        try {
-                            Config.parse(reader)
-                        } catch (e: Throwable) {
-                            throwables.add(e)
-                            null
-                        }?.let {
-                            val nameCopy = name
-                            futureTunnels.add(async(SupervisorJob()) { Application.getTunnelManager().create(nameCopy, it) })
-                        }
-                    }
-                }
+                collectZip(bytes, futureTunnels, throwables)
             } else {
-                futureTunnels.add(async(SupervisorJob()) { Application.getTunnelManager().create(name, Config.parse(contentResolver.openInputStream(uri)!!)) })
-            }
-
-            if (futureTunnels.isEmpty()) {
-                if (throwables.size == 1) {
-                    throw throwables[0]
-                } else {
-                    require(throwables.isNotEmpty()) { context.getString(R.string.no_configs_error) }
+                val base = name.removeSuffix(".conf").removeSuffix(".CONF").ifBlank { "tunnel" }
+                try {
+                    val cfg = ConfSanitizer.parse(String(bytes, StandardCharsets.UTF_8))
+                    VpsEndpoint.rememberFromConfig(cfg)
+                    futureTunnels.add(async(SupervisorJob()) { createUnique(base, cfg) })
+                } catch (e: Throwable) {
+                    throwables.add(e)
                 }
+            }
+            if (futureTunnels.isEmpty()) {
+                if (throwables.size == 1) throw throwables[0]
+                require(throwables.isNotEmpty()) { context.getString(R.string.no_configs_error) }
             }
             val tunnels = futureTunnels.mapNotNull {
                 try {
@@ -110,15 +63,54 @@ object TunnelImporter {
         }
     }
 
+    private suspend fun collectZip(
+        bytes: ByteArray,
+        futureTunnels: ArrayList<Deferred<ObservableTunnel>>,
+        throwables: ArrayList<Throwable>,
+        depth: Int = 0
+    ) {
+        if (depth > 3) return
+        ZipInputStream(ByteArrayInputStream(bytes)).use { zip ->
+            while (true) {
+                val entry = zip.nextEntry ?: break
+                if (entry.isDirectory) continue
+                val raw = zip.readBytes()
+                val leaf = entry.name.substringAfterLast('/').lowercase()
+                if (leaf.endsWith(".zip") || (raw.size >= 4 && raw[0] == 0x50.toByte() && raw[1] == 0x4B.toByte())) {
+                    collectZip(raw, futureTunnels, throwables, depth + 1)
+                    continue
+                }
+                if (!(leaf.endsWith(".conf") || leaf.endsWith(".txt") || String(raw, Charsets.UTF_8).contains("[Interface]"))) continue
+                val base = entry.name.substringAfterLast('/').substringBeforeLast('.').ifBlank { "tunnel" }
+                try {
+                    val cfg = ConfSanitizer.parse(String(raw, StandardCharsets.UTF_8))
+                    VpsEndpoint.rememberFromConfig(cfg)
+                    futureTunnels.add(async(SupervisorJob()) { createUnique(base, cfg) })
+                } catch (e: Throwable) {
+                    throwables.add(e)
+                }
+            }
+        }
+    }
+
+    private suspend fun createUnique(wanted: String, cfg: Config): ObservableTunnel {
+        val mgr = Application.getTunnelManager()
+        var name = wanted.replace(Regex("[^A-Za-z0-9_+=.-]"), "_").ifBlank { "tunnel" }
+        var i = 2
+        val existing = mgr.getTunnels()
+        while (existing.containsKey(name)) {
+            name = "$wanted-$i"
+            i++
+        }
+        return mgr.create(name, cfg)
+    }
+
     fun importTunnel(parentFragmentManager: FragmentManager, configText: String, messageCallback: (CharSequence) -> Unit) {
         try {
-            // Ensure the config text is parseable before proceeding…
-            Config.parse(ByteArrayInputStream(configText.toByteArray(StandardCharsets.UTF_8)))
-
-            // Config text is valid, now create the tunnel…
+            ConfSanitizer.parse(configText)
             ConfigNamingDialogFragment.newInstance(configText).show(parentFragmentManager, null)
         } catch (e: Throwable) {
-            onTunnelImportFinished(emptyList(), listOf<Throwable>(e), messageCallback)
+            onTunnelImportFinished(emptyList(), listOf(e), messageCallback)
         }
     }
 
@@ -133,18 +125,15 @@ object TunnelImporter {
         if (tunnels.size == 1 && throwables.isEmpty())
             message = context.getString(R.string.import_success, tunnels[0].name)
         else if (tunnels.isEmpty() && throwables.size == 1)
+            Unit
         else if (throwables.isEmpty())
-            message = context.resources.getQuantityString(
-                R.plurals.import_total_success,
-                tunnels.size, tunnels.size
-            )
-        else if (!throwables.isEmpty())
+            message = context.resources.getQuantityString(R.plurals.import_total_success, tunnels.size, tunnels.size)
+        else if (throwables.isNotEmpty())
             message = context.resources.getQuantityString(
                 R.plurals.import_partial_success,
                 tunnels.size + throwables.size,
                 tunnels.size, tunnels.size + throwables.size
             )
-
         messageCallback(message)
     }
 

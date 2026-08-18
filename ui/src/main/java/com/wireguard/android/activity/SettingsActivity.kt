@@ -90,6 +90,19 @@ class SettingsActivity : AppCompatActivity() {
                     wgQuickOnlyPrefs.forEach { it.parent?.removePreference(it) }
                 }
             }
+            preferenceManager.findPreference<Preference>("refresh_vps")?.setOnPreferenceClickListener {
+                lifecycleScope.launch {
+                    val ip = withContext(Dispatchers.IO) {
+                        com.wireguard.android.util.VpsEndpoint.refresh()
+                    }
+                    android.widget.Toast.makeText(
+                        requireContext(),
+                        if (ip.isNullOrBlank()) "IP VPS не получен — укажи хост выше" else "VPS IP: $ip",
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                }
+                true
+            }
             preferenceManager.findPreference<Preference>("log_viewer")?.setOnPreferenceClickListener {
                 startActivity(Intent(requireContext(), LogViewerActivity::class.java))
                 true

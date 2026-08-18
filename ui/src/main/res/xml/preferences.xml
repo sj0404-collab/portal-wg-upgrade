@@ -7,6 +7,16 @@
     <com.wireguard.android.preference.VersionPreference
         android:icon="@mipmap/ic_launcher"
         android:key="version" />
+    <EditTextPreference
+        android:key="vps_host"
+        android:singleLineTitle="false"
+        android:title="Хост / URL IP VPS"
+        android:summary="Домен своего сервера или URL, который отдаёт IP (например http://IP:port/ip). Подставится в туннель AetherWG вместо 127.0.0.1"
+        android:dialogTitle="VPS host" />
+    <Preference
+        android:key="refresh_vps"
+        android:title="Обновить IP VPS"
+        android:summary="Резолв DNS / запрос URL и подстановка в дефолтный туннель" />
     <CheckBoxPreference
         android:defaultValue="false"
         android:key="restore_on_boot"
