@@ -1,7 +1,3 @@
-/*
- * Copyright © 2017-2025 WireGuard LLC. All Rights Reserved.
- * SPDX-License-Identifier: Apache-2.0
- */
 package com.wireguard.android.util
 
 import android.content.Context
@@ -13,15 +9,17 @@ import android.os.Build
 import android.util.Log
 import com.wireguard.android.Application
 import com.wireguard.android.backend.Tunnel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Keeps UP tunnels UP across radio loss / Wi-Fi↔mobile switches.
- * Does not tear the VpnService down on transient disconnects.
+ * Network loss = pause. Do not bring the tunnel DOWN or create a new one.
+ * When the radio returns, resume the same saved tunnel if the process dropped it.
  */
 class LinkGuard(private val context: Context) {
     private val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    private var bumpJob: Job? = null
 
     fun start() {
         val req = NetworkRequest.Builder()
@@ -29,16 +27,16 @@ class LinkGuard(private val context: Context) {
             .build()
         val cb = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
-                Log.i(TAG, "network available, restore tunnels")
-                bump()
+                Log.i(TAG, "network available — resume same tunnel if needed")
+                scheduleResume()
             }
 
             override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
-                if (caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) bump()
+                if (caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) scheduleResume()
             }
 
             override fun onLost(network: Network) {
-                Log.i(TAG, "network lost — leave VPN process running, wait for next network")
+                Log.i(TAG, "network lost — pause, keep VpnService and same peer")
             }
         }
         try {
@@ -49,18 +47,19 @@ class LinkGuard(private val context: Context) {
         }
     }
 
-    private fun bump() {
-        Application.getCoroutineScope().launch {
-            delay(800)
+    private fun scheduleResume() {
+        bumpJob?.cancel()
+        bumpJob = Application.getCoroutineScope().launch {
+            delay(2500)
             try {
+                val running = Application.getBackend().runningTunnelNames
+                if (running.isNotEmpty()) {
+                    Log.i(TAG, "already up $running — do not recreate")
+                    return@launch
+                }
                 Application.getTunnelManager().restoreState(true)
             } catch (e: Exception) {
-                Log.e(TAG, "restore failed", e)
-            }
-            try {
-                FirstConnectBootstrap.run(context)
-            } catch (e: Exception) {
-                Log.e(TAG, "bootstrap failed", e)
+                Log.e(TAG, "resume failed", e)
             }
         }
     }

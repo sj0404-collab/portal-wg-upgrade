@@ -94,7 +94,9 @@ object TunnelImporter {
                 try {
                     val cfg = ConfSanitizer.parse(String(raw, StandardCharsets.UTF_8))
                     VpsEndpoint.rememberFromConfig(cfg)
-                    created.add(createUnique(base, cfg))
+                    val clean = base.replace(Regex("[^A-Za-z0-9_+=.-]"), "_")
+                    if (!Application.getTunnelManager().getTunnels().containsKey(clean))
+                        created.add(createUnique(base, cfg))
                 } catch (e: Throwable) {
                     throwables.add(e)
                 }

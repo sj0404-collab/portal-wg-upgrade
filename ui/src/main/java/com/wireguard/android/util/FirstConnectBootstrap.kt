@@ -2,7 +2,6 @@ package com.wireguard.android.util
 
 import android.content.Context
 import android.util.Log
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -23,17 +22,6 @@ object FirstConnectBootstrap {
             Log.e(TAG, "vps", e)
             null
         }
-        val already = UserKnobs.presetsReady.first()
-        var presets = 0
-        if (!already) {
-            presets = try {
-                PresetFactory.generateAll()
-            } catch (e: Throwable) {
-                Log.e(TAG, "presets", e)
-                0
-            }
-            if (presets > 0) UserKnobs.setPresetsReady(true)
-        }
-        "файлы: ${scan.imported}, VPS: ${ip ?: scan.vpsHint ?: "нет"}, пресеты: $presets"
+        "файлы: ${scan.imported}, VPS: ${ip ?: scan.vpsHint ?: "нет"}"
     }
 }

@@ -24,7 +24,7 @@
     <Preference
         android:key="gen_presets"
         android:title="Сгенерировать пресеты"
-        android:summary="full / split / dns — новые ключи + пир из найденного конфига. Не WARP." />
+        android:summary="Копия рабочего туннеля с другим маршрутом (те же ключи). Не создаёт WARP." />
     <CheckBoxPreference
         android:defaultValue="false"
         android:key="restore_on_boot"

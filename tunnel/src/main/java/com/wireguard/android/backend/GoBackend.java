@@ -5,8 +5,12 @@
 
 package com.wireguard.android.backend;
 
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
 import android.system.OsConstants;
@@ -348,6 +352,7 @@ public final class GoBackend implements Backend {
 
             service.protect(wgGetSocketV4(currentTunnelHandle));
             service.protect(wgGetSocketV6(currentTunnelHandle));
+            service.promoteForeground(tunnel.getName());
         } else {
             if (currentTunnelHandle == -1) {
                 Log.w(TAG, "Tunnel already down");
@@ -419,6 +424,34 @@ public final class GoBackend implements Backend {
                     alwaysOnCallback.alwaysOnTriggered();
             }
             return START_STICKY;
+        }
+
+        void promoteForeground(final String tunnelName) {
+            try {
+                if (Build.VERSION.SDK_INT >= 26) {
+                    final NotificationChannel ch = new NotificationChannel(
+                            "aether_vpn", "AetherWG", NotificationManager.IMPORTANCE_LOW);
+                    ch.setDescription("VPN pause/resume, same tunnel");
+                    final NotificationManager nm = getSystemService(NotificationManager.class);
+                    if (nm != null) nm.createNotificationChannel(ch);
+                }
+                final Notification.Builder b = Build.VERSION.SDK_INT >= 26
+                        ? new Notification.Builder(this, "aether_vpn")
+                        : new Notification.Builder(this);
+                final Notification n = b
+                        .setContentTitle("AetherWG")
+                        .setContentText(tunnelName + " — пауза при обрыве, тот же сервер")
+                        .setSmallIcon(android.R.drawable.ic_lock_lock)
+                        .setOngoing(true)
+                        .setOnlyAlertOnce(true)
+                        .build();
+                if (Build.VERSION.SDK_INT >= 34)
+                    startForeground(42, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+                else
+                    startForeground(42, n);
+            } catch (final Throwable e) {
+                Log.w(TAG, "foreground failed", e);
+            }
         }
 
         public void setOwner(final GoBackend owner) {

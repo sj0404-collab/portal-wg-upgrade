@@ -156,8 +156,18 @@ class TunnelManager(private val configStore: ConfigStore) : BaseObservable() {
     suspend fun restoreState(force: Boolean) {
         if (!haveLoaded || (!force && !UserKnobs.restoreOnBoot.first()))
             return
-        val previouslyRunning = UserKnobs.runningTunnels.first()
+        var previouslyRunning = UserKnobs.runningTunnels.first()
+        if (previouslyRunning.isEmpty()) {
+            val last = UserKnobs.lastUsedTunnel.first()
+            if (!last.isNullOrBlank()) previouslyRunning = setOf(last)
+        }
         if (previouslyRunning.isEmpty()) return
+        val already = try {
+            withContext(Dispatchers.IO) { getBackend().runningTunnelNames }
+        } catch (_: Throwable) {
+            emptySet()
+        }
+        if (already.isNotEmpty() && previouslyRunning.all { already.contains(it) }) return
         withContext(Dispatchers.IO) {
             try {
                 tunnelMap.filter { previouslyRunning.contains(it.name) }.map { async(Dispatchers.IO + SupervisorJob()) { setTunnelState(it, Tunnel.State.UP) } }
