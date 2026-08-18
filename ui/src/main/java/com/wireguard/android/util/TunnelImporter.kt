@@ -10,10 +10,7 @@ import com.wireguard.android.R
 import com.wireguard.android.fragment.ConfigNamingDialogFragment
 import com.wireguard.android.model.ObservableTunnel
 import com.wireguard.config.Config
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
@@ -22,7 +19,7 @@ import java.util.zip.ZipInputStream
 object TunnelImporter {
     suspend fun importTunnel(contentResolver: ContentResolver, uri: Uri, messageCallback: (CharSequence) -> Unit) = withContext(Dispatchers.IO) {
         val context = Application.get().applicationContext
-        val futureTunnels = ArrayList<Deferred<ObservableTunnel>>()
+        val created = ArrayList<ObservableTunnel>()
         val throwables = ArrayList<Throwable>()
         try {
             var name = ""
@@ -40,24 +37,16 @@ object TunnelImporter {
                 try {
                     val cfg = ConfSanitizer.parse(String(bytes, StandardCharsets.UTF_8))
                     VpsEndpoint.rememberFromConfig(cfg)
-                    futureTunnels.add(async(SupervisorJob()) { createUnique(base, cfg) })
+                    created.add(createUnique(base, cfg))
                 } catch (e: Throwable) {
                     throwables.add(e)
                 }
             }
-            if (futureTunnels.isEmpty()) {
+            if (created.isEmpty()) {
                 if (throwables.size == 1) throw throwables[0]
                 require(throwables.isNotEmpty()) { context.getString(R.string.no_configs_error) }
             }
-            val tunnels = futureTunnels.mapNotNull {
-                try {
-                    it.await()
-                } catch (e: Throwable) {
-                    throwables.add(e)
-                    null
-                }
-            }
-            withContext(Dispatchers.Main.immediate) { onTunnelImportFinished(tunnels, throwables, messageCallback) }
+            withContext(Dispatchers.Main.immediate) { onTunnelImportFinished(created, throwables, messageCallback) }
         } catch (e: Throwable) {
             withContext(Dispatchers.Main.immediate) { onTunnelImportFinished(emptyList(), listOf(e), messageCallback) }
         }
@@ -65,7 +54,7 @@ object TunnelImporter {
 
     private suspend fun collectZip(
         bytes: ByteArray,
-        futureTunnels: ArrayList<Deferred<ObservableTunnel>>,
+        created: ArrayList<ObservableTunnel>,
         throwables: ArrayList<Throwable>,
         depth: Int = 0
     ) {
@@ -77,7 +66,7 @@ object TunnelImporter {
                 val raw = zip.readBytes()
                 val leaf = entry.name.substringAfterLast('/').lowercase()
                 if (leaf.endsWith(".zip") || (raw.size >= 4 && raw[0] == 0x50.toByte() && raw[1] == 0x4B.toByte())) {
-                    collectZip(raw, futureTunnels, throwables, depth + 1)
+                    collectZip(raw, created, throwables, depth + 1)
                     continue
                 }
                 if (!(leaf.endsWith(".conf") || leaf.endsWith(".txt") || String(raw, Charsets.UTF_8).contains("[Interface]"))) continue
@@ -85,7 +74,7 @@ object TunnelImporter {
                 try {
                     val cfg = ConfSanitizer.parse(String(raw, StandardCharsets.UTF_8))
                     VpsEndpoint.rememberFromConfig(cfg)
-                    futureTunnels.add(async(SupervisorJob()) { createUnique(base, cfg) })
+                    created.add(createUnique(base, cfg))
                 } catch (e: Throwable) {
                     throwables.add(e)
                 }
