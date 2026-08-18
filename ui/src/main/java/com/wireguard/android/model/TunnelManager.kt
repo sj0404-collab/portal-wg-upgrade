@@ -112,12 +112,27 @@ class TunnelManager(private val configStore: ConfigStore) : BaseObservable() {
         for (name in present)
             addToList(name, null, if (running.contains(name)) Tunnel.State.UP else Tunnel.State.DOWN)
         applicationScope.launch {
+            if (tunnelMap.isEmpty()) {
+                try {
+                    seedDefaultTunnel()
+                } catch (e: Throwable) {
+                    Log.e(TAG, "default tunnel seed failed", e)
+                }
+            }
             val lastUsedName = UserKnobs.lastUsedTunnel.first()
             if (lastUsedName != null)
                 lastUsedTunnel = tunnelMap[lastUsedName]
             haveLoaded = true
             restoreState(true)
             tunnels.complete(tunnelMap)
+        }
+    }
+
+    private suspend fun seedDefaultTunnel() = withContext(Dispatchers.IO) {
+        val text = context.assets.open("aetherwg-default.conf").bufferedReader().use { it.readText() }
+        val cfg = Config.parse(text.byteInputStream())
+        withContext(Dispatchers.Main.immediate) {
+            addToList("AetherWG", configStore.create("AetherWG", cfg), Tunnel.State.DOWN)
         }
     }
 
