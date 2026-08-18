@@ -173,6 +173,16 @@ class ObservableTunnel internal constructor(
     }
 
 
+    private fun formatUptime(ms: Long): String {
+        val s = (ms / 1000).coerceAtLeast(0)
+        val h = s / 3600
+        val m = (s % 3600) / 60
+        val sec = s % 60
+        return if (h > 0) String.format("%d ч %02d мин %02d с", h, m, sec)
+        else if (m > 0) String.format("%d мин %02d с", m, sec)
+        else String.format("%d с", sec)
+    }
+
     suspend fun deleteAsync() = manager.delete(this)
 
 
