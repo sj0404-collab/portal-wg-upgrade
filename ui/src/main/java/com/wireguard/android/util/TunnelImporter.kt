@@ -31,7 +31,7 @@ object TunnelImporter {
             val bytes = contentResolver.openInputStream(uri)!!.readBytes()
             val isZip = name.lowercase().endsWith(".zip") || bytes.size >= 4 && bytes[0] == 0x50.toByte() && bytes[1] == 0x4B.toByte()
             if (isZip) {
-                collectZip(bytes, futureTunnels, throwables)
+                collectZip(bytes, created, throwables)
             } else {
                 val base = name.removeSuffix(".conf").removeSuffix(".CONF").ifBlank { "tunnel" }
                 try {
