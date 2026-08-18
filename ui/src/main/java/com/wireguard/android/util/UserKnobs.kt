@@ -114,6 +114,14 @@ object UserKnobs {
     val vpsHost: Flow<String?>
         get() = Application.getPreferencesDataStore().data.map { it[VPS_HOST] }
 
+    private val PRESETS_READY = booleanPreferencesKey("presets_ready")
+    val presetsReady: Flow<Boolean>
+        get() = Application.getPreferencesDataStore().data.map { it[PRESETS_READY] ?: false }
+
+    suspend fun setPresetsReady(v: Boolean) {
+        Application.getPreferencesDataStore().edit { it[PRESETS_READY] = v }
+    }
+
     suspend fun setVpsHost(host: String?) {
         Application.getPreferencesDataStore().edit {
             if (host.isNullOrBlank()) it.remove(VPS_HOST)

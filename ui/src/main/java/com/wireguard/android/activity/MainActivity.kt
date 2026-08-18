@@ -4,8 +4,17 @@
  */
 package com.wireguard.android.activity
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import androidx.core.app.ActivityCompat
+import androidx.lifecycle.lifecycleScope
+import com.wireguard.android.util.FirstConnectBootstrap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -63,6 +72,19 @@ class MainActivity : BaseActivity(), FragmentManager.OnBackStackChangedListener 
         supportFragmentManager.addOnBackStackChangedListener(this)
         backPressedCallback = onBackPressedDispatcher.addCallback(this) { handleBackPressed() }
         onBackStackChanged()
+        if (Build.VERSION.SDK_INT < 33 &&
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 71)
+        }
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                try {
+                    FirstConnectBootstrap.run(applicationContext)
+                } catch (_: Throwable) {
+                }
+            }
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {

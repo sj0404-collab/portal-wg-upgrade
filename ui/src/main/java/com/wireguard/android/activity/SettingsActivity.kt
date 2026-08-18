@@ -22,6 +22,9 @@ import com.wireguard.android.R
 import com.wireguard.android.backend.WgQuickBackend
 import com.wireguard.android.preference.PreferencesPreferenceDataStore
 import com.wireguard.android.util.AdminKnobs
+import com.wireguard.android.util.FirstConnectBootstrap
+import com.wireguard.android.util.PresetFactory
+import com.wireguard.android.util.UserKnobs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -100,6 +103,24 @@ class SettingsActivity : AppCompatActivity() {
                         if (ip.isNullOrBlank()) "IP VPS не получен — укажи хост выше" else "VPS IP: $ip",
                         android.widget.Toast.LENGTH_LONG
                     ).show()
+                }
+                true
+            }
+            preferenceManager.findPreference<Preference>("scan_device")?.setOnPreferenceClickListener {
+                lifecycleScope.launch {
+                    val msg = withContext(Dispatchers.IO) {
+                        FirstConnectBootstrap.run(requireContext().applicationContext)
+                    }
+                    android.widget.Toast.makeText(requireContext(), msg, android.widget.Toast.LENGTH_LONG).show()
+                }
+                true
+            }
+            preferenceManager.findPreference<Preference>("gen_presets")?.setOnPreferenceClickListener {
+                lifecycleScope.launch {
+                    UserKnobs.setPresetsReady(false)
+                    val n = withContext(Dispatchers.IO) { PresetFactory.generateAll() }
+                    UserKnobs.setPresetsReady(true)
+                    android.widget.Toast.makeText(requireContext(), "Пресеты: $n", android.widget.Toast.LENGTH_LONG).show()
                 }
                 true
             }

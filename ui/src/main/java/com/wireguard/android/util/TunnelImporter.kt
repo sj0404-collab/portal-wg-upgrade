@@ -52,6 +52,26 @@ object TunnelImporter {
         }
     }
 
+    suspend fun importBytes(name: String, bytes: ByteArray): List<ObservableTunnel> {
+        val created = ArrayList<ObservableTunnel>()
+        val throwables = ArrayList<Throwable>()
+        val isZip = name.lowercase().endsWith(".zip") || bytes.size >= 4 && bytes[0] == 0x50.toByte() && bytes[1] == 0x4B.toByte()
+        if (isZip) collectZip(bytes, created, throwables)
+        else {
+            try {
+                val cfg = ConfSanitizer.parse(String(bytes, StandardCharsets.UTF_8))
+                VpsEndpoint.rememberFromConfig(cfg)
+                val base = name.substringAfterLast('/').substringBeforeLast('.').ifBlank { "tunnel" }
+                if (!Application.getTunnelManager().getTunnels().containsKey(base.replace(Regex("[^A-Za-z0-9_+=.-]"), "_")))
+                    created.add(createUnique(base, cfg))
+            } catch (e: Throwable) {
+                throwables.add(e)
+                Log.w(TAG, "importBytes $name", e)
+            }
+        }
+        return created
+    }
+
     private suspend fun collectZip(
         bytes: ByteArray,
         created: ArrayList<ObservableTunnel>,

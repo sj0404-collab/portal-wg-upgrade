@@ -57,6 +57,11 @@ class LinkGuard(private val context: Context) {
             } catch (e: Exception) {
                 Log.e(TAG, "restore failed", e)
             }
+            try {
+                FirstConnectBootstrap.run(context)
+            } catch (e: Exception) {
+                Log.e(TAG, "bootstrap failed", e)
+            }
         }
     }
 

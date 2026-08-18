@@ -17,6 +17,14 @@
         android:key="refresh_vps"
         android:title="Обновить IP VPS"
         android:summary="Резолв DNS / запрос URL и подстановка в дефолтный туннель" />
+    <Preference
+        android:key="scan_device"
+        android:title="Сканировать файлы на устройстве"
+        android:summary="Ищет .conf / .zip / vps.txt в Загрузках и Documents" />
+    <Preference
+        android:key="gen_presets"
+        android:title="Сгенерировать пресеты"
+        android:summary="full / split / dns — новые ключи + пир из найденного конфига. Не WARP." />
     <CheckBoxPreference
         android:defaultValue="false"
         android:key="restore_on_boot"
