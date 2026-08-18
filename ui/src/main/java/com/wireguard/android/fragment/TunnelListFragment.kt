@@ -147,7 +147,10 @@ class TunnelListFragment : BaseFragment() {
                             com.wireguard.android.util.FastestExisting.pickAndUp()
                         }
                         if (pick == null) showSnackbar("Нет своих конфигов с живым endpoint")
-                        else showSnackbar("${pick.tunnel.name} — ${pick.ms} мс")
+                        else showSnackbar(
+                            if (pick.kbps > 0) "${pick.tunnel.name} — ${pick.kbps} КБ/с (реальная загрузка 512 КБ)"
+                            else "${pick.tunnel.name} — ${pick.ms} мс (пинг, загрузка не прошла)"
+                        )
                     } catch (e: Throwable) {
                         showSnackbar(ErrorMessages[e])
                     }

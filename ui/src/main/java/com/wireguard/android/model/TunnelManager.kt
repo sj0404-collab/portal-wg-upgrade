@@ -298,8 +298,22 @@ class TunnelManager(private val configStore: ConfigStore) : BaseObservable() {
         @JvmStatic
         fun keepAlive25(cfg: Config): Config {
             val peers = cfg.peers
-            if (peers.isEmpty() || peers.all { it.persistentKeepalive.isPresent }) return cfg
-            val b = Config.Builder().setInterface(cfg.`interface`)
+            val mtuLow = !cfg.`interface`.mtu.isPresent || cfg.`interface`.mtu.orElse(0) <= 1280
+            val needKa = peers.isNotEmpty() && peers.any { !it.persistentKeepalive.isPresent }
+            if (!mtuLow && !needKa) return cfg
+            val ib = com.wireguard.config.Interface.Builder()
+                .setKeyPair(cfg.`interface`.keyPair)
+                .addAddresses(cfg.`interface`.addresses)
+                .addDnsServers(cfg.`interface`.dnsServers)
+                .addDnsSearchDomains(cfg.`interface`.dnsSearchDomains)
+                .excludeApplications(cfg.`interface`.excludedApplications)
+                .includeApplications(cfg.`interface`.includedApplications)
+            cfg.`interface`.listenPort.ifPresent { ib.setListenPort(it) }
+            try {
+                ib.setMtu(if (mtuLow) 1420 else cfg.`interface`.mtu.orElse(1420))
+            } catch (_: Throwable) {
+            }
+            val b = Config.Builder().setInterface(ib.build())
             for (p in peers) {
                 val pb = com.wireguard.config.Peer.Builder()
                     .setPublicKey(p.publicKey)

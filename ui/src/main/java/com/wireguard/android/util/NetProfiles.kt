@@ -39,7 +39,8 @@ object NetProfiles {
             .includeApplications(old.includedApplications)
             .apply {
                 old.listenPort.ifPresent { setListenPort(it) }
-                old.mtu.ifPresent { setMtu(it) }
+                val m = old.mtu.orElse(0)
+                setMtu(if (m <= 1280) 1420 else m)
             }
             .build()
         return Config.Builder().setInterface(iface).addPeers(cfg.peers).build()

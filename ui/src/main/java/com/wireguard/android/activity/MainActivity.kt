@@ -77,23 +77,6 @@ class MainActivity : BaseActivity(), FragmentManager.OnBackStackChangedListener 
         ) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 71)
         }
-        lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
-                try {
-                    FirstConnectBootstrap.run(applicationContext)
-                } catch (_: Throwable) {
-                }
-            }
-        }
-        try {
-            val pm = getSystemService(android.os.PowerManager::class.java)
-            if (pm != null && !pm.isIgnoringBatteryOptimizations(packageName)) {
-                startActivity(Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                    data = android.net.Uri.parse("package:$packageName")
-                })
-            }
-        } catch (_: Throwable) {
-        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {

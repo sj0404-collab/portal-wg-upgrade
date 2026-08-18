@@ -302,10 +302,6 @@ public final class GoBackend implements Backend {
             final VpnService.Builder builder = service.getBuilder();
             builder.setSession(tunnel.getName());
 
-            try {
-                builder.addDisallowedApplication(context.getPackageName());
-            } catch (final Exception ignored) {
-            }
             for (final String excludedApplication : config.getInterface().getExcludedApplications())
                 builder.addDisallowedApplication(excludedApplication);
 
