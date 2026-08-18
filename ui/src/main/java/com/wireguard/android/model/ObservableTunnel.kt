@@ -11,6 +11,7 @@ import com.wireguard.android.BR
 import com.wireguard.android.backend.Statistics
 import com.wireguard.android.backend.Tunnel
 import com.wireguard.android.databinding.Keyed
+import com.wireguard.android.util.QuantityFormatter
 import com.wireguard.android.util.applicationScope
 import com.wireguard.config.Config
 import kotlinx.coroutines.Dispatchers
@@ -62,8 +63,8 @@ class ObservableTunnel internal constructor(
             val pk = if (pkRaw.length > 12) pkRaw.take(5) + "..." + pkRaw.takeLast(5) else pkRaw.ifEmpty { "—" }
             val ep = peer?.endpoint?.map { it.toString() }?.orElse("—") ?: "—"
             val st = statistics
-            val rx = formatBytes(st?.totalRx() ?: 0L)
-            val tx = formatBytes(st?.totalTx() ?: 0L)
+            val rx = QuantityFormatter.formatBytes(st?.totalRx() ?: 0L)
+            val tx = QuantityFormatter.formatBytes(st?.totalTx() ?: 0L)
             var ago = "—"
             val keys = st?.peers()
             if (keys != null && keys.isNotEmpty()) {
