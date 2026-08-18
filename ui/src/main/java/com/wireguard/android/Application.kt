@@ -111,6 +111,9 @@ class Application : android.app.Application() {
         tunnelManager.onCreate()
         LinkGuard(applicationContext).start()
         coroutineScope.launch(Dispatchers.IO) {
+            com.wireguard.android.util.HandshakeWatchdog.loop()
+        }
+        coroutineScope.launch(Dispatchers.IO) {
             try {
                 backend = determineBackend()
                 futureBackend.complete(backend!!)

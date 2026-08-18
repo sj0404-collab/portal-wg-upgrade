@@ -233,7 +233,11 @@ class TunnelManager(private val configStore: ConfigStore) : BaseObservable() {
         var newState = tunnel.state
         var throwable: Throwable? = null
         try {
-            newState = withContext(Dispatchers.IO) { getBackend().setState(tunnel, state, tunnel.getConfigAsync()) }
+            newState = withContext(Dispatchers.IO) {
+                var cfg = tunnel.getConfigAsync()
+                if (state == Tunnel.State.UP) cfg = withKeepalive(cfg)
+                getBackend().setState(tunnel, state, cfg)
+            }
             if (newState == Tunnel.State.UP) {
                 lastUsedTunnel = tunnel
                 UserKnobs.setUserPaused(false)

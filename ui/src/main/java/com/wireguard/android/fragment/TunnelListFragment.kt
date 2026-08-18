@@ -164,6 +164,8 @@ class TunnelListFragment : BaseFragment() {
                             return@launch
                         }
                         val text = t.getConfigAsync().toWgQuickString()
+                        val clip = requireContext().getSystemService(android.content.ClipboardManager::class.java)
+                        clip?.setPrimaryClip(android.content.ClipData.newPlainText(t.name + ".conf", text))
                         val send = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
                             putExtra(Intent.EXTRA_SUBJECT, t.name + ".conf")

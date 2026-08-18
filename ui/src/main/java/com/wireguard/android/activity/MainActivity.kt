@@ -85,6 +85,15 @@ class MainActivity : BaseActivity(), FragmentManager.OnBackStackChangedListener 
                 }
             }
         }
+        try {
+            val pm = getSystemService(android.os.PowerManager::class.java)
+            if (pm != null && !pm.isIgnoringBatteryOptimizations(packageName)) {
+                startActivity(Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                    data = android.net.Uri.parse("package:$packageName")
+                })
+            }
+        } catch (_: Throwable) {
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
