@@ -112,11 +112,14 @@ class TunnelManager(private val configStore: ConfigStore) : BaseObservable() {
         for (name in present)
             addToList(name, null, if (running.contains(name)) Tunnel.State.UP else Tunnel.State.DOWN)
         applicationScope.launch {
-            if (tunnelMap.isEmpty()) {
-                try {
-                    seedDefaultTunnel()
-                } catch (e: Throwable) {
-                    Log.e(TAG, "default tunnel seed failed", e)
+            for (bad in listOf("full", "split", "dns")) {
+                val t = tunnelMap[bad]
+                if (t != null) {
+                    try {
+                        delete(t)
+                    } catch (e: Throwable) {
+                        Log.e(TAG, "remove preset $bad", e)
+                    }
                 }
             }
             val lastUsedName = UserKnobs.lastUsedTunnel.first()
@@ -156,10 +159,12 @@ class TunnelManager(private val configStore: ConfigStore) : BaseObservable() {
     suspend fun restoreState(force: Boolean) {
         if (!haveLoaded || (!force && !UserKnobs.restoreOnBoot.first()))
             return
-        var previouslyRunning = UserKnobs.runningTunnels.first()
+        if (UserKnobs.userPaused.first()) return
+        val junk = setOf("full", "split", "dns", "AetherWG")
+        var previouslyRunning = UserKnobs.runningTunnels.first().filter { it !in junk }.toSet()
         if (previouslyRunning.isEmpty()) {
             val last = UserKnobs.lastUsedTunnel.first()
-            if (!last.isNullOrBlank()) previouslyRunning = setOf(last)
+            if (!last.isNullOrBlank() && last !in junk) previouslyRunning = setOf(last)
         }
         if (previouslyRunning.isEmpty()) return
         val already = try {
@@ -229,8 +234,10 @@ class TunnelManager(private val configStore: ConfigStore) : BaseObservable() {
         var throwable: Throwable? = null
         try {
             newState = withContext(Dispatchers.IO) { getBackend().setState(tunnel, state, tunnel.getConfigAsync()) }
-            if (newState == Tunnel.State.UP)
+            if (newState == Tunnel.State.UP) {
                 lastUsedTunnel = tunnel
+                UserKnobs.setUserPaused(false)
+            }
         } catch (e: Throwable) {
             throwable = e
         }

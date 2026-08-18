@@ -8,7 +8,6 @@ import android.net.NetworkRequest
 import android.os.Build
 import android.util.Log
 import com.wireguard.android.Application
-import com.wireguard.android.backend.Tunnel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

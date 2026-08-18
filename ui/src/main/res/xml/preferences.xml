@@ -21,10 +21,6 @@
         android:key="scan_device"
         android:title="Сканировать файлы на устройстве"
         android:summary="Ищет .conf / .zip / vps.txt в Загрузках и Documents" />
-    <Preference
-        android:key="gen_presets"
-        android:title="Сгенерировать пресеты"
-        android:summary="Копия рабочего туннеля с другим маршрутом (те же ключи). Не создаёт WARP." />
     <CheckBoxPreference
         android:defaultValue="false"
         android:key="restore_on_boot"

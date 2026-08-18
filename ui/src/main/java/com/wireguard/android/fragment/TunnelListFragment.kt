@@ -44,6 +44,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Fragment containing a list of known WireGuard tunnels. It allows creating and deleting tunnels.
@@ -128,9 +129,47 @@ class TunnelListFragment : BaseFragment() {
             stopVpn.setOnClickListener {
                 lifecycleScope.launch {
                     try {
+                        com.wireguard.android.util.UserKnobs.setUserPaused(true)
                         val tunnels = Application.getTunnelManager().getTunnels()
                         tunnels.filter { it.state == com.wireguard.android.backend.Tunnel.State.UP }
                             .forEach { it.setStateAsync(com.wireguard.android.backend.Tunnel.State.DOWN) }
+                        showSnackbar("Пауза — тот же туннель не поднимается, пока не нажмёшь «Быстрый сервер» или тумблер")
+                    } catch (e: Throwable) {
+                        showSnackbar(ErrorMessages[e])
+                    }
+                }
+            }
+            fastVpn.setOnClickListener {
+                lifecycleScope.launch {
+                    showSnackbar("Меряю уже импортированные…")
+                    try {
+                        val pick = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            com.wireguard.android.util.FastestExisting.pickAndUp()
+                        }
+                        if (pick == null) showSnackbar("Нет своих конфигов с живым endpoint")
+                        else showSnackbar("${pick.tunnel.name} — ${pick.ms} мс")
+                    } catch (e: Throwable) {
+                        showSnackbar(ErrorMessages[e])
+                    }
+                }
+            }
+            shareVpn.setOnClickListener {
+                lifecycleScope.launch {
+                    try {
+                        val mgr = Application.getTunnelManager()
+                        val t = mgr.lastUsedTunnel ?: mgr.getTunnels().firstOrNull { it.state == com.wireguard.android.backend.Tunnel.State.UP }
+                            ?: mgr.getTunnels().firstOrNull()
+                        if (t == null) {
+                            showSnackbar("Нечего отдать")
+                            return@launch
+                        }
+                        val text = t.getConfigAsync().toWgQuickString()
+                        val send = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_SUBJECT, t.name + ".conf")
+                            putExtra(Intent.EXTRA_TEXT, text)
+                        }
+                        startActivity(Intent.createChooser(send, "Поделиться ${t.name}.conf"))
                     } catch (e: Throwable) {
                         showSnackbar(ErrorMessages[e])
                     }

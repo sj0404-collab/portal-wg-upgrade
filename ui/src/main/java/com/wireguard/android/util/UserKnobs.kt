@@ -122,6 +122,14 @@ object UserKnobs {
         Application.getPreferencesDataStore().edit { it[PRESETS_READY] = v }
     }
 
+    private val USER_PAUSED = booleanPreferencesKey("user_paused")
+    val userPaused: Flow<Boolean>
+        get() = Application.getPreferencesDataStore().data.map { it[USER_PAUSED] ?: false }
+
+    suspend fun setUserPaused(v: Boolean) {
+        Application.getPreferencesDataStore().edit { it[USER_PAUSED] = v }
+    }
+
     suspend fun setVpsHost(host: String?) {
         Application.getPreferencesDataStore().edit {
             if (host.isNullOrBlank()) it.remove(VPS_HOST)
