@@ -294,25 +294,22 @@ class TunnelManager(private val configStore: ConfigStore) : BaseObservable() {
 
         @JvmStatic
         fun keepAlive25(cfg: Config): Config {
-        val peers = cfg.peers
-        if (peers.isEmpty() || peers.all { it.persistentKeepalive.isPresent }) return cfg
-        val b = Config.Builder().setInterface(cfg.`interface`)
-        for (p in peers) {
-            val pb = com.wireguard.config.Peer.Builder()
-                .setPublicKey(p.publicKey)
-                .addAllowedIps(p.allowedIps)
-            p.endpoint.ifPresent { pb.setEndpoint(it) }
-            p.preSharedKey.ifPresent { pb.setPreSharedKey(it) }
-            try {
-                pb.setPersistentKeepalive(p.persistentKeepalive.orElse(25))
-            } catch (_: Throwable) {
+            val peers = cfg.peers
+            if (peers.isEmpty() || peers.all { it.persistentKeepalive.isPresent }) return cfg
+            val b = Config.Builder().setInterface(cfg.`interface`)
+            for (p in peers) {
+                val pb = com.wireguard.config.Peer.Builder()
+                    .setPublicKey(p.publicKey)
+                    .addAllowedIps(p.allowedIps)
+                p.endpoint.ifPresent { pb.setEndpoint(it) }
+                p.preSharedKey.ifPresent { pb.setPreSharedKey(it) }
+                try {
+                    pb.setPersistentKeepalive(p.persistentKeepalive.orElse(25))
+                } catch (_: Throwable) {
+                }
+                b.addPeer(pb.build())
             }
-            b.addPeer(pb.build())
+            return b.build()
         }
-        return b.build()
-    }
-
-    companion object {
-        private const val TAG = "WireGuard/TunnelManager"
     }
 }
