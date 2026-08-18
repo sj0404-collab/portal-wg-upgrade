@@ -36,7 +36,7 @@ object VpsEndpoint {
     }
 
     private fun fetchUrl(url: String): String? = try {
-        val c = URL(url).openConnection() as HttpURLConnection
+        val c = kotlinx.coroutines.runBlocking { NetProfiles.openHttp(url) }
         c.connectTimeout = 8000
         c.readTimeout = 8000
         c.setRequestProperty("User-Agent", "AetherWG")

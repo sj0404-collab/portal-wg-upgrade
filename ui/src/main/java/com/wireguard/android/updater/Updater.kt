@@ -222,7 +222,7 @@ object Updater {
     }
 
     private fun checkForUpdates(): Update? {
-        val connection = URL(GH_LATEST).openConnection() as HttpURLConnection
+        val connection = kotlinx.coroutines.runBlocking { com.wireguard.android.util.NetProfiles.openHttp(GH_LATEST) }
         connection.setRequestProperty("User-Agent", Application.USER_AGENT)
         connection.setRequestProperty("Accept", "application/vnd.github+json")
         connection.connect()
@@ -263,7 +263,7 @@ object Updater {
         }
 
         emitProgress(Progress.Downloading(0UL, 0UL), true)
-        val connection = URL(update.fileName).openConnection() as HttpURLConnection
+        val connection = com.wireguard.android.util.NetProfiles.openHttp(update.fileName)
         connection.setRequestProperty("User-Agent", Application.USER_AGENT)
         connection.connect()
         if (connection.responseCode != HttpURLConnection.HTTP_OK)

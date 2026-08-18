@@ -235,7 +235,10 @@ class TunnelManager(private val configStore: ConfigStore) : BaseObservable() {
         try {
             newState = withContext(Dispatchers.IO) {
                 var cfg = tunnel.getConfigAsync()
-                if (state == Tunnel.State.UP) cfg = keepAlive25(cfg)
+                if (state == Tunnel.State.UP) {
+                    cfg = keepAlive25(cfg)
+                    cfg = com.wireguard.android.util.NetProfiles.withDns(cfg)
+                }
                 getBackend().setState(tunnel, state, cfg)
             }
             if (newState == Tunnel.State.UP) {

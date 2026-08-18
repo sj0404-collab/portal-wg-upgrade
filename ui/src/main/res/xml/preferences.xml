@@ -21,6 +21,33 @@
         android:key="scan_device"
         android:title="Сканировать файлы на устройстве"
         android:summary="Ищет .conf / .zip / vps.txt в Загрузках и Documents" />
+    <ListPreference
+        android:key="dns_profile"
+        android:title="DNS IPv4 + IPv6"
+        android:summary="Публичные резолверы в туннель. keep = как в .conf"
+        android:defaultValue="keep"
+        android:entries="@array/dns_profile_labels"
+        android:entryValues="@array/dns_profile_values" />
+    <EditTextPreference
+        android:key="dns_custom"
+        android:title="Свой DNS"
+        android:summary="IPv4 и IPv6 через запятую"
+        android:dialogTitle="DNS"
+        android:defaultValue="1.1.1.1, 2606:4700:4700::1111" />
+    <Preference
+        android:key="apply_dns"
+        android:title="Применить DNS ко всем туннелям"
+        android:summary="Меняет только поле DNS, ключи и endpoint не трогает" />
+    <EditTextPreference
+        android:key="proxy_socks"
+        android:title="SOCKS5 для приложения"
+        android:summary="host:port — только HTTP приложения (апдейт). Не туннель WG."
+        android:dialogTitle="SOCKS5" />
+    <EditTextPreference
+        android:key="proxy_http"
+        android:title="HTTP-прокси для приложения"
+        android:summary="host:port — только исходящие запросы AetherWG"
+        android:dialogTitle="HTTP proxy" />
     <CheckBoxPreference
         android:defaultValue="false"
         android:key="restore_on_boot"

@@ -104,6 +104,13 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 true
             }
+            preferenceManager.findPreference<Preference>("apply_dns")?.setOnPreferenceClickListener {
+                lifecycleScope.launch {
+                    val n = withContext(Dispatchers.IO) { com.wireguard.android.util.NetProfiles.applyToStoredTunnels() }
+                    android.widget.Toast.makeText(requireContext(), "DNS записан в $n туннелей", android.widget.Toast.LENGTH_LONG).show()
+                }
+                true
+            }
             preferenceManager.findPreference<Preference>("scan_device")?.setOnPreferenceClickListener {
                 lifecycleScope.launch {
                     val msg = withContext(Dispatchers.IO) {

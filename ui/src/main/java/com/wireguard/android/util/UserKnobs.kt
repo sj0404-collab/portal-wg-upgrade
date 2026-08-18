@@ -130,6 +130,22 @@ object UserKnobs {
         Application.getPreferencesDataStore().edit { it[USER_PAUSED] = v }
     }
 
+    private val DNS_PROFILE = stringPreferencesKey("dns_profile")
+    val dnsProfile: Flow<String?>
+        get() = Application.getPreferencesDataStore().data.map { it[DNS_PROFILE] }
+
+    private val DNS_CUSTOM = stringPreferencesKey("dns_custom")
+    val dnsCustom: Flow<String?>
+        get() = Application.getPreferencesDataStore().data.map { it[DNS_CUSTOM] }
+
+    private val PROXY_SOCKS = stringPreferencesKey("proxy_socks")
+    val proxySocks: Flow<String?>
+        get() = Application.getPreferencesDataStore().data.map { it[PROXY_SOCKS] }
+
+    private val PROXY_HTTP = stringPreferencesKey("proxy_http")
+    val proxyHttp: Flow<String?>
+        get() = Application.getPreferencesDataStore().data.map { it[PROXY_HTTP] }
+
     suspend fun setVpsHost(host: String?) {
         Application.getPreferencesDataStore().edit {
             if (host.isNullOrBlank()) it.remove(VPS_HOST)

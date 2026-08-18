@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="dns_profile_labels">
+        <item>Как в конфиге</item>
+        <item>Cloudflare 1.1.1.1 + IPv6</item>
+        <item>Google 8.8.8.8 + IPv6</item>
+        <item>Quad9 9.9.9.9 + IPv6</item>
+        <item>OpenDNS + IPv6</item>
+        <item>Свой список</item>
+    </string-array>
+    <string-array name="dns_profile_values">
+        <item>keep</item>
+        <item>cloudflare</item>
+        <item>google</item>
+        <item>quad9</item>
+        <item>opendns</item>
+        <item>custom</item>
+    </string-array>
+</resources>
