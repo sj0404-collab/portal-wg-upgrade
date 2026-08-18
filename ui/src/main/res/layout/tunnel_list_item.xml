@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <data>
+        <import type="android.view.View" />
+        <import type="com.wireguard.android.backend.Tunnel.State" />
+        <variable name="collection" type="com.wireguard.android.databinding.ObservableKeyedArrayList&lt;String, com.wireguard.android.model.ObservableTunnel&gt;" />
+        <variable name="key" type="String" />
+        <variable name="item" type="com.wireguard.android.model.ObservableTunnel" />
+        <variable name="fragment" type="com.wireguard.android.fragment.TunnelListFragment" />
+    </data>
+
+    <com.wireguard.android.widget.MultiselectableRelativeLayout
+        android:id="@+id/tunnel_list_item"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/transparent"
+        android:paddingHorizontal="18dp"
+        android:paddingVertical="10dp">
+
+        <View
+            android:id="@+id/status_dot"
+            android:layout_width="10dp"
+            android:layout_height="10dp"
+            android:layout_alignParentStart="true"
+            android:layout_marginTop="10dp"
+            android:background="@{item.state == State.UP ? @drawable/dot_up : @drawable/dot_down}" />
+
+        <TextView
+            android:id="@+id/tunnel_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_toStartOf="@id/tunnel_switch"
+            android:layout_toEndOf="@id/status_dot"
+            android:layout_marginStart="12dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@{key}"
+            android:textColor="#F2F2F2"
+            android:textSize="18sp"
+            tools:text="WARP_STR5741" />
+
+        <com.wireguard.android.widget.ToggleSwitch
+            android:id="@+id/tunnel_switch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            app:checked="@{item.state == State.UP}"
+            app:onBeforeCheckedChanged="@{fragment::setTunnelState}" />
+
+        <TextView
+            android:id="@+id/tunnel_meta"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/tunnel_name"
+            android:layout_toStartOf="@id/tunnel_switch"
+            android:layout_alignStart="@id/tunnel_name"
+            android:layout_marginTop="6dp"
+            android:lineSpacingExtra="3dp"
+            android:text="@{item.localStatus}"
+            android:textColor="#9AA0A6"
+            android:textSize="13sp"
+            android:visibility="@{item.state == State.UP ? View.VISIBLE : View.GONE}"
+            tools:text="Время работы: 40 мин 44 с" />
+    </com.wireguard.android.widget.MultiselectableRelativeLayout>
+</layout>
