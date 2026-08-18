@@ -235,7 +235,7 @@ class TunnelManager(private val configStore: ConfigStore) : BaseObservable() {
         try {
             newState = withContext(Dispatchers.IO) {
                 var cfg = tunnel.getConfigAsync()
-                if (state == Tunnel.State.UP) cfg = withKeepalive(cfg)
+                if (state == Tunnel.State.UP) cfg = keepAlive25(cfg)
                 getBackend().setState(tunnel, state, cfg)
             }
             if (newState == Tunnel.State.UP) {
@@ -287,6 +287,29 @@ class TunnelManager(private val configStore: ConfigStore) : BaseObservable() {
 
     suspend fun getTunnelStatistics(tunnel: ObservableTunnel): Statistics = withContext(Dispatchers.Main.immediate) {
         tunnel.onStatisticsChanged(withContext(Dispatchers.IO) { getBackend().getStatistics(tunnel) })!!
+    }
+
+    companion object {
+        private const val TAG = "WireGuard/TunnelManager"
+
+        @JvmStatic
+        fun keepAlive25(cfg: Config): Config {
+        val peers = cfg.peers
+        if (peers.isEmpty() || peers.all { it.persistentKeepalive.isPresent }) return cfg
+        val b = Config.Builder().setInterface(cfg.`interface`)
+        for (p in peers) {
+            val pb = com.wireguard.config.Peer.Builder()
+                .setPublicKey(p.publicKey)
+                .addAllowedIps(p.allowedIps)
+            p.endpoint.ifPresent { pb.setEndpoint(it) }
+            p.preSharedKey.ifPresent { pb.setPreSharedKey(it) }
+            try {
+                pb.setPersistentKeepalive(p.persistentKeepalive.orElse(25))
+            } catch (_: Throwable) {
+            }
+            b.addPeer(pb.build())
+        }
+        return b.build()
     }
 
     companion object {
